@@ -13,3 +13,4 @@ setwd(my.path)
 dataDir = file.path(sample,"data")
 
 files = list.files(dataDir,full.names=TRUE,recursive=T)
+sdad
