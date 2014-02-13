@@ -3,41 +3,48 @@
 
 library(plyr)
 library(reshape)
+library(data.table)
+
 
 sample = "BRCA"
 
 # Set path
-my.path = file.path("~/TestRun/TCGA-Expression-Gene",sample)
+my.path = file.path("~/Documents/JHMI-Research/TCGA-Expression-Gene",sample)
 setwd(my.path)
 
 # Set data directory
 dataDir ="data"
 
 # list cancer and normal files
+
 cancer = list.files(file.path(dataDir,"Cancer"),full.names=TRUE,recursive=T)
 normal = list.files(file.path(dataDir,"Normal"),full.names=TRUE,recursive=T)
-
-# Read in data
-
 f1 = read.delim(cancer[1],header =T,stringsAsFactors =FALSE,sep="\t")
-for (i in 2:length(cancer)){
-    f2 = read.delim(cancer[i],header =T,stringsAsFactors =FALSE,sep = "\t")
-    f1 = cbind(f1,f2[,2])
+
+# Read in data and build the expression matrix,
+# where rownames are genes and columns are samples,
+# each value is log loess normalized.
+
+build.expression.matrix = function(list.of.files) {
+    f1 = read.delim(list.of.files[1],header =T,stringsAsFactors =FALSE,sep="\t")
+    rownames(f1) = f1[,1]
+    f1 = f1[-1,]
+    f1 = as.data.frame(f1)
+    f1$Hybridization.REF = NULL
+    for (i in 2:length(list.of.files)){
+        f2 = read.delim(list.of.files[i],header =T,stringsAsFactors =FALSE,sep = "\t")
+        f2 = f2[-1,]
+        f2$Hybridization.REF = NULL    
+        f1 = cbind(f1,f2)
+    }
+    return(f1)
 }
 
-cancer_dat = f1;
-rm(f1)
+# Build the expression matrix for both types.
+normal_dat = build.expression.matrix(normal)
+cancer_dat = build.expression.matrix(cancer)
 
-concat_array = function(files){
-    f = lapply(cancer,read.delim,stringsAsFactors=F,header=T,sep="\t")
-    x = as.data.frame(f)
-    reshape::merge_all(dfs=f,by = "log2.lowess.normalized..cy5.cy3..collapsed.by.gene.symbol")
-    y = do.call(what="cbind",f)
-#     f1 = read.delim(cancer[1],header =T,stringsAsFactors =FALSE,sep="\t")
-#     for (i in 2:length(files)){
-#         f2 = read.delim(files[i],header =T,stringsAsFactors =FALSE,sep = "\t")
-#         f1 = cbind(f1,f2[,2])
-#     }
-#     return(f1)    
-}
+rownames(cancer_dat) = rownames(cancer_dat)
+colnames(cancer_dat) = colnames(cancer_dat)
+cancer_data = data.matrix(cancer_dat) 
 

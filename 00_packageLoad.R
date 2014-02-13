@@ -8,6 +8,7 @@ setwd(my.path)
 
 # Install packages required
 packageList = c("EDASeq","edgeR","DESeq","BitSeq","Rsubread","easyRNASeq","goseq","DSS")
+library(BiocInstaller)
 biocLite(packageList)
 
 # Load packages
