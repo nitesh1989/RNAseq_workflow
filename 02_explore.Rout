@@ -1,0 +1,131 @@
+
+R version 3.0.1 (2013-05-16) -- "Good Sport"
+Copyright (C) 2013 The R Foundation for Statistical Computing
+Platform: x86_64-apple-darwin12.4.0 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # Nitesh Turaga
+> # TCGA- Expression-Gene UNC Agilent analysis
+> 
+> library(plyr)
+> library(reshape)
+
+Attaching package: ‘reshape’
+
+The following object is masked from ‘package:plyr’:
+
+    rename, round_any
+
+> library(data.table)
+> 
+> 
+> sample = "BRCA"
+> 
+> # Set path
+> my.path = file.path("~/Documents/JHMI-Research/TCGA-Expression-Gene",sample)
+> setwd(my.path)
+> 
+> # Set data directory
+> dataDir ="data"
+> 
+> # list cancer and normal files
+> 
+> cancer = list.files(file.path(dataDir,"Cancer"),full.names=TRUE,recursive=T)
+> normal = list.files(file.path(dataDir,"Normal"),full.names=TRUE,recursive=T)
+> f1 = read.delim(cancer[1],header =T,stringsAsFactors =FALSE,sep="\t")
+> 
+> # Read in data and build the expression matrix,
+> # where rownames are genes and columns are samples,
+> # each value is log loess normalized.
+> 
+> build.expression.matrix = function(list.of.files) {
++     f1 = read.delim(list.of.files[1],header =T,stringsAsFactors =FALSE,sep="\t")
++     rownames(f1) = f1[,1]
++     f1 = f1[-1,]
++     f1 = as.data.frame(f1)
++     f1$Hybridization.REF = NULL
++     for (i in 2:length(list.of.files)){
++         f2 = read.delim(list.of.files[i],header =T,stringsAsFactors =FALSE,sep = "\t")
++         f2 = f2[-1,]
++         f2$Hybridization.REF = NULL    
++         f1 = cbind(f1,f2)
++     }
++     # Just to make sure the names are cast on rows and columns
++     rownames(f1) = rownames(f1)
++     colnames(f1) = colnames(f1)    
++     # Return a data matrix
++     f1 = data.matrix(f1)
++     return(f1)
++ }
+> 
+> # Build the expression matrix for both types.
+> normal_dat = build.expression.matrix(normal)
+There were 34 warnings (use warnings() to see them)
+> cancer_dat = build.expression.matrix(cancer)
+There were 50 or more warnings (use warnings() to see the first 50)
+> 
+> 
+> save(normal_dat,cancer_dat,file = "expressionMat.rda",compress =TRUE)
+> library(limma)
+> 
+> phenotype = data.frame(filenames = c(colnames(cancer_dat),colnames(normal_dat)),
++                        status = c(rep(x="Cancer",length(cancer)),rep(x="Normal",length(normal))))
+> 
+> phenotype$status = as.factor(phenotype$status)
+> 
+> design = model.matrix(~phenotype$status)
+> 
+> expression_mat = cbind(cancer_dat,normal_dat)
+> 
+> fit = lmFit(expression_mat,design)
+> 
+> # Plot SA of the linear model fit.
+> #pdf(file = "fit_plot.pdf")
+> #plotSA(fit,main = "Gene level")
+> #dev.off()
+> summary(fit)
+                 Length Class      Mode     
+coefficients     35628  -none-     numeric  
+stdev.unscaled   35628  -none-     numeric  
+sigma            17814  -none-     numeric  
+df.residual      17814  -none-     numeric  
+cov.coefficients     4  -none-     numeric  
+pivot                2  -none-     numeric  
+genes                1  data.frame list     
+method               1  -none-     character
+design            1180  -none-     numeric  
+> 
+> #Seperate fits
+> fit = ebayes(fit)
+> 
+> #topTable(fit$p.value[,2], coef="phenotype$statusNormal", adjust="BH")
+> 
+> #class(fit)
+> #names(fit)
+> 
+> fit$p.corr = p.adjust(fit$p.value[,2],method="bonferroni")
+> 
+> subset.fit = fit$p.corr[fit$p.corr<=0.0005]
+> pdf(file = "heatmap.pdf")
+> heatmap(expression_mat[names(subset.fit),])
+> dev.off()
+null device 
+          1 
+> ### If FDR does not give a subset of <5000 genes, use a more stringent correction metho
+> summary(subset.fit$p.corr)
+Error in subset.fit$p.corr : $ operator is invalid for atomic vectors
+Calls: summary
+Execution halted
