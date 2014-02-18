@@ -9,12 +9,13 @@ library(limma)
 library(data.table)
 library(BiocInstaller)
 library(gcrma)
-
+require(gmodels)
 
 sample = "BRCA"
 
 # Set path
-my.path = file.path("~/Documents/JHMI-Research/TCGA-Expression-Gene",sample)
+#my.path = file.path("~/Documents/JHMI-Research/TCGA-Expression-Gene",sample)
+my.path = file.path("~/TestRun/TCGA-Expression-Gene",sample)
 setwd(my.path)
 
 # Set data directory
@@ -54,15 +55,23 @@ build.expression.matrix = function(list.of.files) {
 normal_dat = build.expression.matrix(normal)
 cancer_dat = build.expression.matrix(cancer)
 
-#save(normal_dat,cancer_dat,file = "expressionMat.rda",compress =TRUE)
+save(normal_dat,cancer_dat,file = "expressionMat.rda",compress =TRUE)
+load("expressionMat.rda")
 
 # Phenotype of expression matrix
 phenotype = data.frame(filenames = c(colnames(cancer_dat),colnames(normal_dat)),
                        status = c(rep(x="Cancer",length(cancer)),rep(x="Normal",length(normal))))
 phenotype$status = as.factor(phenotype$status)
 
-# Design matrix
-design = model.matrix(phenotype$filenames~phenotype$status)
+# Design matrix  and make contrasts
+forDesign = factor(phenotype$status,levels = unique(phenotype$status))
+
+dMat = model.matrix(~0+forDesign)
+colnames(dMat) = gsub('forDesign',"",colnames(dMat))
+levels(dMat) = colnames(dMat)
+colnames(dMat) = levels(dMat)
+cMat = makeContrasts(levels = dMat,CvsN = Cancer-Normal)
+
 
 # Expression matrix
 expression_mat = cbind(cancer_dat,normal_dat)
@@ -70,31 +79,46 @@ expression_mat = cbind(cancer_dat,normal_dat)
 # Linear model fit
 fit = lmFit(expression_mat,design)
 
+
+###fit model
+fit.ls <- lmFit(expression_mat,dMat,method="ls")
+fit.ls <- contrasts.fit(fit.ls,cMat)
+eb.ls <- eBayes(fit.ls)
+
+
+
 # Plot SA of the linear model fit.
 #pdf(file = "fit_plot.pdf")
 #plotSA(fit,main = "Gene level")
 #dev.off()
-summary(fit)
+summary(eb.ls)
 
-#Seperate fits
-fit = ebayes(fit)
-
-#topTable(fit$p.value[,2], coef="phenotype$statusNormal", adjust="BH")
-
-#class(fit)
-#names(fit)
-
-fit$p.corr = p.adjust(fit$p.value[,2],method="bonferroni")
-
-subset.fit = fit$p.corr[fit$p.corr<=0.0005]
-pdf(file = "heatmap.pdf")
-heatmap(expression_mat[names(subset.fit),])
-dev.off()
-### If FDR does not give a subset of <5000 genes, use a more stringent correction metho
-summary(subset.fit$p.corr)
-# subset.df = subset.fit
+save(list=ls(pattern="\\.ls"),file='./objs/lmObjs.ls.rda')
 
 
-# library(Biobase)
-# eset = new("ExpressionSet",assayData = expression_mat,phenoData = phenotype,featureData = NULL,annotation = NULL)
+
+# 
+# 
+# ##################################################################
+# # Previous stuff
+# ##################################################################
+# #Seperate fits
+# fit = ebayes(fit)
+# 
+# #topTable(fit$p.value[,2], coef="phenotype$statusNormal", adjust="BH")
+# 
+# #class(fit)
+# #names(fit)
+# 
+# fit$p.corr = p.adjust(fit$p.value[,2],method="bonferroni")
+# 
+# subset.fit = fit$p.corr[fit$p.corr<=0.0005]
+# pdf(file = "heatmap.pdf")
+# heatmap(expression_mat[names(subset.fit),])
+# dev.off()
+# ### If FDR does not give a subset of <5000 genes, use a more stringent correction metho
+# summary(subset.fit$p.corr)
+# # subset.df = subset.fit
+# 
+# 
 

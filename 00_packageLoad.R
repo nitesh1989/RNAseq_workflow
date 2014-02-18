@@ -14,5 +14,6 @@ biocLite(packageList)
 # Load packages
 require("DESeq")
 require("Biostrings")
-
-
+require("Biobase")
+require("parallel") #Provides substitute for lapply
+require("Rmpi")
