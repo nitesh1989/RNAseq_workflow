@@ -25,5 +25,7 @@ load("expressionMat.rda")
 ###select annotation
 annSel <- rownames(expression_mat)
 
-toptable(fit=eb.ls,genelist=annSel,adjust.method="fdr",number=100)
-    
+topListOfGenes = toptable(fit=eb.ls,genelist=annSel,adjust.method="fdr",number=100)
+save(topListOfGenes,file = "objs/listOfGenes.rda")
+
+write.csv(topListOfGenes,file = "objs/listOfGenes.csv")

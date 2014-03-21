@@ -6,7 +6,7 @@ library(plyr)
 sample = "BRCA"
 
 # Set path
-my.path = file.path("~/TestRun/TCGA-Expression-Gene",sample)
+my.path = file.path("~/Documents/TestRun/TCGA-Expression-Gene",sample)
 setwd(my.path)
 
 

@@ -15,7 +15,7 @@ sample = "BRCA"
 
 # Set path
 #my.path = file.path("~/Documents/JHMI-Research/TCGA-Expression-Gene",sample)
-my.path = file.path("~/TestRun/TCGA-Expression-Gene",sample)
+my.path = file.path("~/Documents/TestRun/TCGA-Expression-Gene",sample)
 setwd(my.path)
 
 # Set data directory
@@ -77,8 +77,7 @@ cMat = makeContrasts(levels = dMat,CvsN = Cancer-Normal)
 expression_mat = cbind(cancer_dat,normal_dat)
 
 # Linear model fit
-fit = lmFit(expression_mat,design)
-
+fit = lmFit(expression_mat,dMat)
 
 ###fit model
 fit.ls <- lmFit(expression_mat,dMat,method="ls")
